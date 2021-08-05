@@ -1,17 +1,162 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+
+//Square Component
+function Square(props) {
+    return ( //props.onClick is equal to value of onClick property in renderSquare function of Board component (onClick of square calls "() => this.handleClick(i)")
+      <button className="square" onClick={props.onClick}>
+        {props.value}
+      </button>
+    );
+  }
+
+
+
+//Board Component
+class Board extends React.Component {
+
+  renderSquare(i) {
+    return <Square 
+      value={ this.props.squares[i] }
+      onClick={ ()=> this.props.onClick(i) }
+    />;
+  }
+
+  render() {
+    return (
+      <div>
+        <div className="board-row">
+          {this.renderSquare(0)}
+          {this.renderSquare(1)}
+          {this.renderSquare(2)}
+        </div>
+        <div className="board-row">
+          {this.renderSquare(3)}
+          {this.renderSquare(4)}
+          {this.renderSquare(5)}
+        </div>
+        <div className="board-row">
+          {this.renderSquare(6)}
+          {this.renderSquare(7)}
+          {this.renderSquare(8)}
+        </div>
+      </div>
+    );
+  }
+}
+
+
+class Game extends React.Component {
+  //constructor for state properties(history and xisNext)
+  constructor(props){
+    super(props);
+    this.state = {
+      history: [{
+        squares: Array(9).fill(null),
+      }],
+      stepNumber: 0,
+      xisNext: true,
+    };
+  }
+  
+  /*
+    function called each time a square is clicked 
+    1. Checks if there is a winner or if square already has a value
+    2. Sets squares value to X or O based on value of xisNext
+    3. Updates state properties(history and xisNext)
+  */
+  handleClick(i) {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1) //slice used to remove all "future" steps from history if we go back to a previous step in the game
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+  
+    // 1.
+    if(calculateWinner(squares) || squares[i]) { 
+      return; 
+    }
+    // 2.
+    squares[i] = this.state.xisNext ? "X" : "O";
+
+    // 3. 
+    this.setState({ 
+      history: history.concat([{  //concat is used instead of push() because it creates new history array instead of mutating existing
+        squares: squares,
+      }]),
+      stepNumber: history.length,
+      xisNext: !this.state.xisNext, 
+    });
+  };
+
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      xisNext: (step % 2) === 0, //if step is even number, xisNext=true
+    });
+  }
+
+  render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);
+    let status;
+
+    if (winner) status = 'Winner: ' + winner;
+    else status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+
+    const moves = history.map((step, move) => {
+      const desc = move ? 
+       'Go to move # ' + move : 'Go to game start';
+      return (
+        <li key={move}>
+          <button onClick={ ()=> this.jumpTo(move) }>{ desc }</button>
+        </li>
+      );
+    });
+
+    return (
+      <div className="game">
+        <div className="game-board">
+          <Board 
+            squares={ current.squares }
+            onClick={ (i)=> this.handleClick(i) } 
+          />
+        </div>
+        <div className="game-info">
+          <div>{ status }</div>
+          <ol>{ moves }</ol>
+        </div>
+      </div>
+    );
+  }
+}
+
+// ========================================
 
 ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <Game />,
   document.getElementById('root')
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+
+
+//Global function used to determine is there is a winner. Called after each time handleClick event is called and when Game componenet is rendered
+function calculateWinner(squares) {
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b, c] = lines[i];
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return squares[a];
+    }
+  }
+  return null;
+}
